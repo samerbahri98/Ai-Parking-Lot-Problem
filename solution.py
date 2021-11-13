@@ -36,6 +36,13 @@ class Vehicule:
         self.position.x += vec.x
         self.position.y += vec.y
 
+    def getPosition(self):
+        lambda void: [self.position.x, self.position.y]
+
+    def getFrontier(self):
+        lambda void: [[self.position.x + self.dimensions.x, self.position.y],
+                      [self.position.x, self.position.y + self.dimensions.y]]
+
 
 class Grid:
     def __init__(self, parking_lot_dimensions: Vector, vehicules) -> None:
@@ -59,22 +66,51 @@ class Grid:
                 return False
             vehicule.rotate()
         vehicule.translate(self.cursor.position)
-        for i in range(self.cursor.position.x, self.cursor.position.x + vehicule.dimensions.x):
-            for j in range(self.cursor.position.y, self.cursor.position.y + vehicule.dimensions.y):
+        for i in range(self.cursor.position.x,
+                       self.cursor.position.x + vehicule.dimensions.x):
+            for j in range(self.cursor.position.y,
+                           self.cursor.position.y + vehicule.dimensions.y):
                 self.layout[i][j] = vehicule.id
-        self.cursor.translate(Vector(f"{vehicule.dimensions.x}\t0"))
         return True
 
     def arrange(self):
         self.vehicule_stack = []
-        self.frontier = [{[0,0]}]
+        self.frontier = [[[0, 0]]]
         while self.cursor.id < len(self.vehicules):
-            current_vehicule = self.vehicules[self.cursor.id]
+            current_vehicule: Vehicule = self.vehicules[self.cursor.id - 1]
+            current_frontier_array = self.frontier[self.cursor.id - 1]
             self.vehicule_stack.append(current_vehicule)
-            
-            if(self.place):
-                current_vehicule
-            self.cursor.id += 1
+            is_placed = False
+            for index, frontier in enumerate(current_frontier_array):
+                self.cursor.position.x, self.cursor.position.y = frontier[
+                    0], frontier[1]
+                if self.place(current_vehicule):
+                    self.cursor.id += 1
+                    is_placed = True
+                    current_frontier_array.remove(frontier)
+                    frontier_x, frontier_y = frontier[
+                        0] + current_vehicule.dimensions.x, frontier[
+                            1] + current_vehicule.dimensions.y
+
+                    appended_frontier = []
+                    ### needs more testing
+                    if frontier_x < self.parking_lot_dimensions.x and not [
+                            frontier_x, frontier[1]
+                    ] in current_frontier_array:
+                        appended_frontier.append([frontier_x, frontier[1]])
+                    if frontier_y < self.parking_lot_dimensions.y and not [
+                            frontier[0], frontier_y
+                    ] in current_frontier_array:
+                        appended_frontier.append([frontier_x, frontier[1]])
+                    current_frontier_array = current_frontier_array[:
+                                                                    index] + appended_frontier + current_frontier_array[
+                                                                        index +
+                                                                        1:]
+                    self.frontier.append(current_frontier_array)
+                    break
+
+            # else:
+            #     self.cursor.id -= 1
 
     def print(self):
         return "\n".join(["\t".join(map(str, v)) for v in self.layout])
@@ -84,13 +120,13 @@ class Grid:
 vehicules = []
 number_of_vehicules = 7
 parking_lot_dimensions = Vector("5\t7")
-if(inputs):
+if (inputs):
     parking_lot_input = input("")
     parking_lot_dimensions = Vector(parking_lot_input)
     number_of_vehicules_string = input("")
     number_of_vehicules = int(number_of_vehicules_string)
     for i in range(number_of_vehicules):
-        vehicules.append(Vehicule(i+1, input("")))
+        vehicules.append(Vehicule(i + 1, input("")))
 else:
     # for testing
     vehicules.append(Vehicule(1, "4\t2"))
@@ -104,7 +140,10 @@ else:
 # grid
 grid = Grid(parking_lot_dimensions, vehicules)
 
-grid.place(grid.vehicules[1])
-grid.place(grid.vehicules[5])
+# grid.place(grid.vehicules[1])
+# grid.place(grid.vehicules[5])
+
+grid.arrange()
+
 # solution
 print(grid.print())
