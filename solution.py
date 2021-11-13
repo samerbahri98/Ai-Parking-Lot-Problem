@@ -28,9 +28,11 @@ class Vehicule:
         self.id = id
         self.dimensions = Vector(dimensions)
         self.position = Vector("0\t0")
+        self.rotated = False
 
     def rotate(self):
         self.dimensions.rotate()
+        self.rotated = True
 
     def translate(self, vec: Vector):
         self.position.x += vec.x
@@ -50,31 +52,55 @@ class Grid:
             self.layout.append(vector)
         self.cursor = Cursor(1, Vector("0\t0"))
 
-    def place(self, vehicule: Vehicule) -> bool:
-        p_x = self.parking_lot_dimensions.x - self.cursor.position.x
-        p_y = self.parking_lot_dimensions.y - self.cursor.position.y
+    def is_placeable(self, vehicule: Vehicule) -> bool:
+        if vehicule.position.x+vehicule.dimensions.x > self.parking_lot_dimensions.x or vehicule.position.y+vehicule.dimensions.y > self.parking_lot_dimensions.y:
 
-        if vehicule.dimensions.x > p_x:
-            if vehicule.dimensions.y > p_y:
-                return False
-            vehicule.rotate()
-        vehicule.translate(self.cursor.position)
-        for i in range(self.cursor.position.x, self.cursor.position.x + vehicule.dimensions.x):
-            for j in range(self.cursor.position.y, self.cursor.position.y + vehicule.dimensions.y):
-                self.layout[i][j] = vehicule.id
-        self.cursor.translate(Vector(f"{vehicule.dimensions.x}\t0"))
+            return False
+        for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
+            for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
+                if self.layout[i][j] != 0:
+                    return False
         return True
 
+    def place(self, vehicule: Vehicule):
+        for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
+            for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
+                self.layout[i][j] = vehicule.id
+
+    def erease(self, vehicule: Vehicule):
+        for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
+            for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
+                self.layout[i][j] = 0
+
     def arrange(self):
-        self.vehicule_stack = []
-        self.frontier = [{[0,0]}]
+        self.frontiers_array = [[[0, 0]]]
         while self.cursor.id < len(self.vehicules):
-            current_vehicule = self.vehicules[self.cursor.id]
-            self.vehicule_stack.append(current_vehicule)
-            
-            if(self.place):
-                current_vehicule
-            self.cursor.id += 1
+            # current_frontier_array = self.frontiers_array[self.cursor.id - 1]
+            current_frontier_array = self.frontiers_array[0]
+            is_placed = False
+            for index, frontier in enumerate(current_frontier_array):
+                self.vehicules[self.cursor.id -
+                               1].position.x = frontier[0]
+                self.vehicules[self.cursor.id -
+                               1].position.y = frontier[1]
+                if (self.is_placeable(self.vehicules[self.cursor.id - 1])):
+                    is_placed = True
+                else:
+                    self.vehicules[self.cursor.id - 1].rotate()
+                    if (self.is_placeable(self.vehicules[self.cursor.id - 1])):
+                        is_placed = True
+                if(is_placed):
+                    self.place(self.vehicules[self.cursor.id - 1])
+                    break
+            if(is_placed):
+                self.cursor.id += 1
+            else:
+                del self.frontiers_array[-1]
+                self.cursor.id -= 1
+                self.erease(self.vehicules[self.cursor.id - 1])
+                self.vehicules[self.cursor.id - 1].rotate()
+
+        return
 
     def print(self):
         return "\n".join(["\t".join(map(str, v)) for v in self.layout])
@@ -104,7 +130,11 @@ else:
 # grid
 grid = Grid(parking_lot_dimensions, vehicules)
 
-grid.place(grid.vehicules[1])
-grid.place(grid.vehicules[5])
+# grid.place(grid.vehicules[0])
+# grid.place(grid.vehicules[1])
+# grid.place(grid.vehicules[2])
+# grid.place(grid.vehicules[3])
+
 # solution
+grid.arrange()
 print(grid.print())
