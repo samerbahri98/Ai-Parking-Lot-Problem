@@ -12,6 +12,12 @@ class Vector:
     def rotate(self):
         self.x, self.y = self.y, self.x
 
+    def compare(self, v): lambda: self.x == v.x and self.y == v.y
+
+    def from_list(self, a):
+        self.x = a[0]
+        self.y = a[1]
+
 
 class Cursor:
     def __init__(self, id, position: Vector) -> None:
@@ -42,7 +48,7 @@ class Vehicule:
 class Grid:
     def __init__(self, parking_lot_dimensions: Vector, vehicules) -> None:
 
-        self.vehicules = vehicules
+        self.vehicules: list[Vehicule] = vehicules
         self.layout = []
         self.parking_lot_dimensions = parking_lot_dimensions
         for _ in repeat(None, parking_lot_dimensions.x):
@@ -50,7 +56,10 @@ class Grid:
             for __ in repeat(None, parking_lot_dimensions.y):
                 vector.append(0)
             self.layout.append(vector)
-        self.cursor = Cursor(1, Vector("0\t0"))
+
+        zero_vector = Vector("0\t0")
+        self.cursor = Cursor(1, zero_vector)
+        self.frontiers_array = [[zero_vector]]
 
     def is_placeable(self, vehicule: Vehicule) -> bool:
         if vehicule.position.x+vehicule.dimensions.x > self.parking_lot_dimensions.x or vehicule.position.y+vehicule.dimensions.y > self.parking_lot_dimensions.y:
@@ -59,6 +68,8 @@ class Grid:
         for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
             for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
                 if self.layout[i][j] != 0:
+                    # if(not inputs):
+                    #     print(self.layout[i])
                     return False
         return True
 
@@ -72,38 +83,77 @@ class Grid:
             for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
                 self.layout[i][j] = 0
 
-    def arrange(self):
-        self.frontiers_array = [[[0, 0]]]
-        while self.cursor.id < len(self.vehicules):
-            # current_frontier_array = self.frontiers_array[self.cursor.id - 1]
-            current_frontier_array = self.frontiers_array[0]
-            is_placed = False
-            for index, frontier in enumerate(current_frontier_array):
-                self.vehicules[self.cursor.id -
-                               1].position.x = frontier[0]
-                self.vehicules[self.cursor.id -
-                               1].position.y = frontier[1]
-                if (self.is_placeable(self.vehicules[self.cursor.id - 1])):
+    def intercept_frontier(self, index: int, vehicule: Vehicule):
+        current_frontier = self.frontiers_array[-1]
+        x = vehicule.position.x+vehicule.dimensions.x
+        v_x = Vector(f"{x}\t{vehicule.position.y}")
+        y = vehicule.position.y+vehicule.dimensions.y
+        v_y = Vector(f"{vehicule.position.x}\t{y}")
+        e_x, e_y = False, False
+        for frontier_vector in current_frontier:
+            if frontier_vector.compare(v_x):
+                e_x = True
+            if frontier_vector.compare(v_y):
+                e_y = True
+            if e_x and e_y:
+                return
+        appended_frontier = []
+        if (not e_x) and x < self.parking_lot_dimensions.x:
+            appended_frontier.append(v_x)
+        if (not e_y) and y < self.parking_lot_dimensions.y:
+            appended_frontier.append(v_y)
+        current_frontier = current_frontier[:index] + \
+            appended_frontier + current_frontier[index+1:]
+        self.frontiers_array.append(current_frontier)
+
+    def try_to_place(self, current_vehicule_index: int) -> bool:
+        is_placed = False
+        current_frontier_array = self.frontiers_array[current_vehicule_index]
+        for index, frontier in enumerate(current_frontier_array):
+            # self.vehicules[current_vehicule_index].translate(frontier)
+            self.vehicules[current_vehicule_index].position.x = frontier.x
+            self.vehicules[current_vehicule_index].position.y = frontier.y
+            if (self.is_placeable(self.vehicules[current_vehicule_index])):
+                is_placed = True
+            elif self.vehicules[current_vehicule_index].rotated == False:
+                self.vehicules[current_vehicule_index].rotate()
+                if (self.is_placeable(self.vehicules[current_vehicule_index])):
                     is_placed = True
-                else:
-                    self.vehicules[self.cursor.id - 1].rotate()
-                    if (self.is_placeable(self.vehicules[self.cursor.id - 1])):
-                        is_placed = True
-                if(is_placed):
-                    self.place(self.vehicules[self.cursor.id - 1])
-                    break
+            if(is_placed):
+                self.place(self.vehicules[current_vehicule_index])
+                self.intercept_frontier(
+                    index, self.vehicules[current_vehicule_index])
+                break
+        return is_placed
+
+    def rollback(self):
+        del self.frontiers_array[-1]
+        if(self.vehicules[self.cursor.id-1].rotated):
+            self.vehicules[self.cursor.id-1].rotate()
+            self.vehicules[self.cursor.id-1].rotated = False
+            self.vehicules[self.cursor.id-1].position.x = 0
+            self.vehicules[self.cursor.id-1].position.y = 0
+        self.cursor.id -= 1
+        self.erease(self.vehicules[self.cursor.id - 1])
+        self.vehicules[self.cursor.id-1].rotate()
+
+    def arrange(self):
+        # initialization
+        while self.cursor.id < len(self.vehicules)+1:
+
+            current_vehicule_index = self.cursor.id - 1
+            is_placed = self.try_to_place(current_vehicule_index)
+
             if(is_placed):
                 self.cursor.id += 1
+
             else:
-                del self.frontiers_array[-1]
-                self.cursor.id -= 1
-                self.erease(self.vehicules[self.cursor.id - 1])
-                self.vehicules[self.cursor.id - 1].rotate()
-
-        return
-
-    def print(self):
-        return "\n".join(["\t".join(map(str, v)) for v in self.layout])
+                self.rollback()
+            # if(not inputs):
+            #     print(f"\n--------{self.cursor.id}\n")
+            #     print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
+            #     print("\n--------\n")
+        print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
 
 
 # inputs
@@ -137,4 +187,3 @@ grid = Grid(parking_lot_dimensions, vehicules)
 
 # solution
 grid.arrange()
-print(grid.print())
