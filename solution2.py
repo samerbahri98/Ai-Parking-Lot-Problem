@@ -24,9 +24,16 @@ class Cursor:
         self.position = position
         self.id = id
 
-    def translate(self, vec: Vector):
+    def translate(self, vec: Vector) -> None:
         self.position.x += vec.x
         self.position.y += vec.y
+
+
+class Fronter:
+    def __init__(self, position, rotation, banned=[]) -> None:
+        self.position: Vector = position
+        self.rotation: bool = rotation
+        self.banned: list[int] = banned
 
 
 class Vehicule:
@@ -59,7 +66,8 @@ class Grid:
 
         zero_vector = Vector("0\t0")
         self.cursor = Cursor(1, zero_vector)
-        self.frontiers_array = [[zero_vector]]
+        self.frontiers_array = [
+            [Fronter(zero_vector, False), Fronter(zero_vector, True)]]
 
     def is_placeable(self, vehicule: Vehicule) -> bool:
         if vehicule.position.x+vehicule.dimensions.x > self.parking_lot_dimensions.x or vehicule.position.y+vehicule.dimensions.y > self.parking_lot_dimensions.y:
@@ -91,17 +99,19 @@ class Grid:
         v_y = Vector(f"{vehicule.position.x}\t{y}")
         e_x, e_y = False, False
         for frontier_vector in current_frontier:
-            if frontier_vector.compare(v_x):
+            if frontier_vector.position.compare(v_x):
                 e_x = True
-            if frontier_vector.compare(v_y):
+            if frontier_vector.position.compare(v_y):
                 e_y = True
             if e_x and e_y:
                 return
-        appended_frontier = []
+        appended_frontier: list[Fronter] = []
         if (not e_x) and x < self.parking_lot_dimensions.x:
-            appended_frontier.append(v_x)
+            appended_frontier.append(Fronter(v_x, True))
+            appended_frontier.append(Fronter(v_x, False))
         if (not e_y) and y < self.parking_lot_dimensions.y:
-            appended_frontier.append(v_y)
+            appended_frontier.append(Fronter(v_y, True))
+            appended_frontier.append(Fronter(v_y, False))
         current_frontier = current_frontier[:index] + \
             appended_frontier + current_frontier[index+1:]
         self.frontiers_array.append(current_frontier)
@@ -110,49 +120,64 @@ class Grid:
         is_placed = False
         current_frontier_array = self.frontiers_array[current_vehicule_index]
         for index, frontier in enumerate(current_frontier_array):
+            # print(frontier)
             # self.vehicules[current_vehicule_index].translate(frontier)
-            self.vehicules[current_vehicule_index].position.x = frontier.x
-            self.vehicules[current_vehicule_index].position.y = frontier.y
+            if (current_vehicule_index in frontier.banned):
+                print(frontier)
+                continue
+            
+            if (is_placed):
+                break    
+            
+            self.vehicules[current_vehicule_index].position.x = frontier.position.x
+            self.vehicules[current_vehicule_index].position.y = frontier.position.y
+            if (frontier.rotation and not self.vehicules[current_vehicule_index].rotated):
+                self.vehicules[current_vehicule_index].rotate()
+            if (not frontier.rotation and self.vehicules[current_vehicule_index].rotated):
+                self.vehicules[current_vehicule_index].rotate()
+                self.vehicules[current_vehicule_index].rotated = False
+
             if (self.is_placeable(self.vehicules[current_vehicule_index])):
                 is_placed = True
-            elif self.vehicules[current_vehicule_index].rotated == False:
-                self.vehicules[current_vehicule_index].rotate()
-                if (self.is_placeable(self.vehicules[current_vehicule_index])):
-                    is_placed = True
-            if(is_placed):
                 self.place(self.vehicules[current_vehicule_index])
                 self.intercept_frontier(
                     index, self.vehicules[current_vehicule_index])
+
+            if(is_placed):
+                self.frontiers_array[current_vehicule_index-1][index].banned.append(
+                    current_vehicule_index)
+                print(str(current_vehicule_index) + "is placed")
                 break
         return is_placed
 
     def rollback(self):
-        del self.frontiers_array[-1]
-        if(self.vehicules[self.cursor.id-1].rotated):
-            self.vehicules[self.cursor.id-1].rotate()
-            self.vehicules[self.cursor.id-1].rotated = False
-            self.vehicules[self.cursor.id-1].position.x = 0
-            self.vehicules[self.cursor.id-1].position.y = 0
+        current_vehicule_index = self.cursor.id - 1
+        for fr in self.frontiers_array[-1]:
+            if (current_vehicule_index not in fr.banned):
+                return False
+
+        self.frontiers_array.remove(self.frontiers_array[-1])
         self.cursor.id -= 1
-        self.erease(self.vehicules[self.cursor.id - 1])
-        self.vehicules[self.cursor.id-1].rotate()
+        self.erease(self.vehicules[self.cursor.id])
+        print("rolling back")
+        return True
 
     def arrange(self):
-        # initialization
         while self.cursor.id < len(self.vehicules)+1:
-
+            if(self.rollback()):
+                continue
             current_vehicule_index = self.cursor.id - 1
             is_placed = self.try_to_place(current_vehicule_index)
 
             if(is_placed):
                 self.cursor.id += 1
 
-            else:
-                self.rollback()
-            # if(not inputs):
-            #     print(f"\n--------{self.cursor.id}\n")
-            #     print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
-            #     print("\n--------\n")
+            if(not inputs):
+                print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
+                print("---")
+
+    def deploy(self):
+        self.arrange()
         print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
 
 
@@ -192,4 +217,4 @@ grid = Grid(parking_lot_dimensions, vehicules)
 # grid.place(grid.vehicules[3])
 
 # solution
-grid.arrange()
+grid.deploy()
