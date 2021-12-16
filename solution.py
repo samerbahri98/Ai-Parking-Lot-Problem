@@ -12,7 +12,7 @@ class Vector:
     def rotate(self):
         self.x, self.y = self.y, self.x
 
-    def compare(self, v): lambda: self.x == v.x and self.y == v.y
+    def compare(self, v): lambda : self.x == v.x and self.y == v.y
 
     def from_list(self, a):
         self.x = a[0]
