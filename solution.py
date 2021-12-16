@@ -35,6 +35,7 @@ class Vehicule:
         self.dimensions = Vector(dimensions)
         self.position = Vector("0\t0")
         self.rotated = False
+        self.frontier = 0
 
     def rotate(self):
         self.dimensions.rotate()
@@ -49,6 +50,8 @@ class Grid:
     def __init__(self, parking_lot_dimensions: Vector, vehicules) -> None:
 
         self.vehicules: list[Vehicule] = vehicules
+        self.vehicules.sort(key=lambda v: v.dimensions.x * v.dimensions.y)
+        self.vehicules.reverse()
         self.layout = []
         self.parking_lot_dimensions = parking_lot_dimensions
         for _ in repeat(None, parking_lot_dimensions.x):
@@ -77,6 +80,7 @@ class Grid:
         for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
             for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
                 self.layout[i][j] = vehicule.id
+        vehicule.frontier +=1
 
     def erease(self, vehicule: Vehicule):
         for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
@@ -98,10 +102,10 @@ class Grid:
             if e_x and e_y:
                 return
         appended_frontier = []
-        if (not e_x) and x < self.parking_lot_dimensions.x:
-            appended_frontier.append(v_x)
         if (not e_y) and y < self.parking_lot_dimensions.y:
             appended_frontier.append(v_y)
+        if (not e_x) and x < self.parking_lot_dimensions.x:
+            appended_frontier.append(v_x)
         current_frontier = current_frontier[:index] + \
             appended_frontier + current_frontier[index+1:]
         self.frontiers_array.append(current_frontier)
@@ -111,6 +115,8 @@ class Grid:
         current_frontier_array = self.frontiers_array[current_vehicule_index]
         for index, frontier in enumerate(current_frontier_array):
             # self.vehicules[current_vehicule_index].translate(frontier)
+            if(index <self.vehicules[current_vehicule_index].frontier ):
+                continue
             self.vehicules[current_vehicule_index].position.x = frontier.x
             self.vehicules[current_vehicule_index].position.y = frontier.y
             if (self.is_placeable(self.vehicules[current_vehicule_index])):
@@ -126,16 +132,17 @@ class Grid:
                 break
         return is_placed
 
-    def rollback(self):
-        del self.frontiers_array[-1]
+    def rollback(self): 
         if(self.vehicules[self.cursor.id-1].rotated):
             self.vehicules[self.cursor.id-1].rotate()
             self.vehicules[self.cursor.id-1].rotated = False
             self.vehicules[self.cursor.id-1].position.x = 0
             self.vehicules[self.cursor.id-1].position.y = 0
-        self.cursor.id -= 1
-        self.erease(self.vehicules[self.cursor.id - 1])
-        self.vehicules[self.cursor.id-1].rotate()
+            del self.frontiers_array[-1]
+            self.vehicules[self.cursor.id-1].frontier=0
+            self.cursor.id -= 1
+            self.erease(self.vehicules[self.cursor.id - 1])
+            self.vehicules[self.cursor.id-1].rotate()
 
     def arrange(self):
         # initialization
@@ -158,8 +165,8 @@ class Grid:
 
 # inputs
 vehicules = []
-number_of_vehicules = 13
-parking_lot_dimensions = Vector("6\t6")
+number_of_vehicules = 25
+parking_lot_dimensions = Vector("12\t12")
 if(inputs):
     parking_lot_input = input("")
     parking_lot_dimensions = Vector(parking_lot_input)
@@ -169,19 +176,31 @@ if(inputs):
         vehicules.append(Vehicule(i+1, input("")))
 else:
     # for testing
-    vehicules.append(Vehicule(1, "2\t3"))
-    vehicules.append(Vehicule(2, "2\t1"))
-    vehicules.append(Vehicule(3, "1\t1"))
-    vehicules.append(Vehicule(4, "1\t3"))
-    vehicules.append(Vehicule(5, "1\t1"))
-    vehicules.append(Vehicule(6, "3\t1"))
-    vehicules.append(Vehicule(7, "1\t6"))
-    vehicules.append(Vehicule(8, "1\t3"))
-    vehicules.append(Vehicule(9, "1\t1"))
-    vehicules.append(Vehicule(10, "2\t1"))
+    vehicules.append(Vehicule(1, "3\t6"))
+    vehicules.append(Vehicule(2, "1\t1"))
+    vehicules.append(Vehicule(3, "1\t3"))
+    vehicules.append(Vehicule(4, "1\t1"))
+    vehicules.append(Vehicule(5, "1\t3"))
+    vehicules.append(Vehicule(6, "1\t1"))
+    vehicules.append(Vehicule(7, "1\t1"))
+    vehicules.append(Vehicule(8, "2\t5"))
+    vehicules.append(Vehicule(9, "4\t1"))
+    vehicules.append(Vehicule(10, "1\t1"))
     vehicules.append(Vehicule(11, "1\t1"))
-    vehicules.append(Vehicule(12, "1\t6"))
-    vehicules.append(Vehicule(13, "1\t1"))
+    vehicules.append(Vehicule(12, "1\t4"))
+    vehicules.append(Vehicule(13, "2\t1"))
+    vehicules.append(Vehicule(14, "10\t1"))
+    vehicules.append(Vehicule(15, "2\t1"))
+    vehicules.append(Vehicule(16, "2\t5"))
+    vehicules.append(Vehicule(17, "2\t6"))
+    vehicules.append(Vehicule(18, "2\t12"))
+    vehicules.append(Vehicule(19, "1\t4"))
+    vehicules.append(Vehicule(20, "1\t1"))
+    vehicules.append(Vehicule(21, "1\t7"))
+    vehicules.append(Vehicule(22, "1\t3"))
+    vehicules.append(Vehicule(23, "6\t1"))
+    vehicules.append(Vehicule(24, "10\t1"))
+    vehicules.append(Vehicule(25, "1\t5"))
 
 # grid
 grid = Grid(parking_lot_dimensions, vehicules)
