@@ -1,5 +1,5 @@
 from itertools import repeat
-inputs = False
+inputs = True
 # classes
 
 
@@ -48,7 +48,7 @@ class Vehicule:
         self.id:int = id
         self.dimensions:Vector = Vector()
         self.dimensions.from_line(dimensions)
-        self.position:Vector = Vector("0\t0")
+        self.position:Vector = Vector()
         self.rotated:bool = False
         self.frontier:int = 0
 
@@ -111,9 +111,11 @@ class Grid:
                 self.layout[i][j] = vehicule.id
 
     def erease(self, vehicule: Vehicule):
+        
         for i in range(vehicule.position.x, vehicule.position.x+vehicule.dimensions.x):
             for j in range(vehicule.position.y, vehicule.position.y+vehicule.dimensions.y):
                 self.layout[i][j] = 0
+        0
 
     def intercept_frontier(self, index: int, vehicule: Vehicule):
         current_frontiers = self.frontiers_array[-1]
@@ -137,6 +139,7 @@ class Grid:
         is_placed = False
         current_frontier_array = self.frontiers_array[self.cursor]
         for index, frontier in enumerate(current_frontier_array):
+            if (index < self.vehicules[self.cursor].frontier): continue
             # self.vehicules[current_vehicule_index].translate(frontier)
             self.vehicules[self.cursor].positionnate(frontier)
             if (self.is_placeable(self.vehicules[self.cursor])):
@@ -151,7 +154,6 @@ class Grid:
     def rollback(self):
         del self.frontiers_array[-1]
         self.vehicules[self.cursor].reset()
-        self.erease(self.vehicules[self.cursor])
         self.cursor -= 1
         self.erease(self.vehicules[self.cursor])
 
@@ -159,6 +161,10 @@ class Grid:
     def arrange(self):
         # initialization
         while self.cursor < len(self.vehicules):
+            
+            
+            if (self.vehicules[self.cursor].frontier >= len(self.frontiers_array[self.cursor])):
+                self.rollback()   
 
             is_placed = self.try_to_place()
 
@@ -166,9 +172,9 @@ class Grid:
                 self.cursor += 1
 
             else:
-                self.erease(self.vehicules[self.cursor])
-                if (self.vehicules[self.cursor].frontier >= len(self.frontiers_array[-1])):
-                    self.rollback()      
+                self.rollback() 
+                # self.erease(self.vehicules[self.cursor])
+   
         print("\n".join(["\t".join(map(str, v)) for v in self.layout]))
             
 
@@ -182,7 +188,7 @@ class Grid:
 vehicules = []
 number_of_vehicules = 19
 parking_lot_dimensions = Vector()
-parking_lot_dimensions.from_line("15\t15") 
+parking_lot_dimensions.from_line("9\t9") 
 if(inputs):
     parking_lot_input = input("")
     parking_lot_dimensions.from_line(parking_lot_input)
@@ -192,37 +198,25 @@ if(inputs):
         vehicules.append(Vehicule(i+1, input("")))
 else:
     # for testing
-    vehicules.append(Vehicule(1, "8\t1"))
+    vehicules.append(Vehicule(1, "1\t1"))
     vehicules.append(Vehicule(2, "1\t1"))
-    vehicules.append(Vehicule(3, "6\t2"))
-    vehicules.append(Vehicule(4, "4\t1"))
+    vehicules.append(Vehicule(3, "2\t3"))
+    vehicules.append(Vehicule(4, "1\t1"))
     vehicules.append(Vehicule(5, "1\t1"))
-    vehicules.append(Vehicule(6, "1\t2"))
-    vehicules.append(Vehicule(7, "1\t1"))
-    vehicules.append(Vehicule(8, "1\t2"))
-    vehicules.append(Vehicule(9, "2\t1"))
-    vehicules.append(Vehicule(10, "10\t5"))
-    vehicules.append(Vehicule(11, "1\t1"))
+    vehicules.append(Vehicule(6, "4\t2"))
+    vehicules.append(Vehicule(7, "1\t3"))
+    vehicules.append(Vehicule(8, "7\t1"))
+    vehicules.append(Vehicule(9, "7\t2"))
+    vehicules.append(Vehicule(10, "1\t1"))
+    vehicules.append(Vehicule(11, "1\t5"))
     vehicules.append(Vehicule(12, "1\t1"))
     vehicules.append(Vehicule(13, "1\t1"))
-    vehicules.append(Vehicule(14, "1\t1"))
-    vehicules.append(Vehicule(15, "10\t9"))
-    vehicules.append(Vehicule(16, "1\t2"))
-    vehicules.append(Vehicule(17, "2\t6"))
-    vehicules.append(Vehicule(18, "3\t2"))
-    vehicules.append(Vehicule(19, "3\t1"))
-    vehicules.append(Vehicule(20, "2\t3"))
-    vehicules.append(Vehicule(21, "1\t2"))
-    vehicules.append(Vehicule(22, "1\t1"))
-    vehicules.append(Vehicule(23, "1\t2"))
-    vehicules.append(Vehicule(24, "1\t1"))
-    vehicules.append(Vehicule(25, "2\t1"))
-    vehicules.append(Vehicule(26, "1\t1"))
-    vehicules.append(Vehicule(27, "1\t1"))
-    vehicules.append(Vehicule(28, "1\t1"))
-    vehicules.append(Vehicule(29, "1\t1"))
-    vehicules.append(Vehicule(30, "1\t3"))
-    vehicules.append(Vehicule(31, "2\t2"))
+    vehicules.append(Vehicule(14, "1\t2"))
+    vehicules.append(Vehicule(15, "5\t2"))
+    vehicules.append(Vehicule(16, "3\t4"))
+    vehicules.append(Vehicule(17, "1\t1"))
+    vehicules.append(Vehicule(18, "1\t5"))
+    vehicules.append(Vehicule(19, "1\t1"))
 # grid
 grid = Grid(parking_lot_dimensions, vehicules)
 
